@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Tasks template for modernization plan. Generate this file alongside plan.md to track individual migration tasks.",
+  "tasks": [
+    {
+      "type": "upgrade",
+      "id": "001-upgrade-dotnet-to-net10",
+      "description": "Upgrade ZavaAuditWorker to the latest .NET LTS runtime and SDK-style project format.",
+      "reason": "The user explicitly requested modernization to the latest framework before cloud migration work.",
+      "requirements": "Upgrade the current .NET Framework 4.8 worker to .NET 10 (latest LTS), including project format modernization needed for subsequent Azure SDK-based migrations.",
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "transform",
+      "id": "002-transform-azure-cloud-native-services",
+      "description": "Modernize core messaging and data integrations to Azure cloud-native managed services.",
+      "reason": "The user requested cloud-native service modernization as part of Azure adoption.",
+      "requirements": "Migrate queue processing from RabbitMQ to Azure Service Bus and database connectivity from existing SQL Server integration to Azure SQL Database, using Managed Identity-based authentication patterns for service access.",
+      "dependencies": [
+        "001-upgrade-dotnet-to-net10"
+      ],
+      "skills": [
+        {
+          "name": "migration-azure-servicebus",
+          "location": "builtin"
+        },
+        {
+          "name": "migration-azure-sql-database",
+          "location": "builtin"
+        },
+        {
+          "name": "migration-managed-identity",
+          "location": "builtin"
+        }
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "security",
+      "id": "003-security-cve-remediation",
+      "description": "Scan and remediate dependency CVEs before deployment.",
+      "reason": "Security and vulnerability remediation is required in every modernization plan before go-live.",
+      "requirements": "Scan all project dependencies for known CVEs and remediate any identified vulnerabilities. Upgrade vulnerable dependencies to minimum patched versions, document major-version remediation risk when applicable, and verify build/test health after remediation.",
+      "dependencies": [
+        "002-transform-azure-cloud-native-services"
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      }
+    },
+    {
+      "type": "deployment",
+      "id": "004-deployment-azure-container-apps",
+      "description": "Deploy the modernized worker to Azure Container Apps.",
+      "reason": "The modernization goal explicitly includes Azure deployment and defaults to Azure Container Apps.",
+      "requirements": "Containerize and deploy the modernized application to Azure Container Apps using managed identity-first configuration and production-ready deployment settings.",
+      "dependencies": [
+        "003-security-cve-remediation"
+      ],
+      "targetAzureService": "Azure Container Apps",
+      "resourceStatus": "will create new service",
+      "deploymentTool": "bicep",
+      "skills": [
+        {
+          "name": "azcli-containerapp-deploy",
+          "location": "builtin"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "planName": "plan",
+    "projectName": "ZavaAuditWorker",
+    "language": "dotnet",
+    "createdAt": "2026-05-29T08:04:42.946Z",
+    "version": "1.0"
+  }
+}
