@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Tasks template for modernization plan. Generate this file alongside plan.md to track individual migration tasks.",
+  "tasks": [
+    {
+      "type": "transform",
+      "id": "001-transform-rabbitmq-to-servicebus",
+      "description": "Migrate the audit event consumer from RabbitMQ to Azure Service Bus using Managed Identity authentication.",
+      "reason": "The application currently uses a self-hosted RabbitMQ broker with hardcoded credentials (host, user, password) in app.config and Program.cs. Migrating to Azure Service Bus removes the need to manage a message broker, enables cloud-native event processing, and eliminates hardcoded credentials by using Managed Identity. Addresses assessment issues: Hardcoded sensitive data detected (RabbitMQ credentials in app.config and Program.cs).",
+      "requirements": "Replace the RabbitMQ.Client dependency with the Azure Service Bus SDK. Update the message consumer to receive messages from an Azure Service Bus queue (equivalent to the current 'audit.events' RabbitMQ queue). Authenticate using Managed Identity (DefaultAzureCredential) instead of username/password. Preserve the existing message processing logic (JSON and XML parsing, dead-letter handling on failure, acknowledgement on success). Remove all hardcoded RabbitMQ connection parameters.",
+      "skills": [
+        {
+          "name": "migration-azure-servicebus",
+          "location": "builtin"
+        }
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      },
+      "dependencies": []
+    },
+    {
+      "type": "transform",
+      "id": "002-transform-sql-to-azure-sql",
+      "description": "Migrate the audit event persistence layer from SQL Server with username/password authentication to Azure SQL Database using Managed Identity.",
+      "reason": "The application uses hardcoded SQL Server credentials (user ID and password) in both app.config and Program.cs, and constructs connection strings with embedded secrets. Migrating to Azure SQL Database with Managed Identity eliminates all hardcoded database credentials. Addresses assessment issues: Hardcoded sensitive data detected (SQL credentials in Program.cs and app.config), Connection strings without configuration builders detected.",
+      "requirements": "Replace the System.Data.SqlClient connection with Azure SQL Database using Managed Identity (DefaultAzureCredential / passwordless authentication). Remove hardcoded SQL credentials (user ID, password) from app.config and Program.cs. Preserve the existing schema-adaptive insert logic that supports both legacy AuditLog schema (with ActionID foreign key) and the modern schema (EventType, ServiceName, UserId, etc.). Ensure the database connection is configured via environment variable or managed configuration without embedded secrets.",
+      "skills": [
+        {
+          "name": "migration-azure-sql-database",
+          "location": "builtin"
+        }
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      },
+      "dependencies": []
+    },
+    {
+      "type": "security",
+      "id": "003-security-cve-remediation",
+      "description": "Scan all project dependencies for known CVEs and remediate any identified vulnerabilities to ensure the application is secure.",
+      "reason": "The project uses RabbitMQ.Client 5.2.0 and other dependencies that may have known security vulnerabilities. Remediating CVEs before deployment ensures the application meets security compliance requirements.",
+      "requirements": "Upgrade vulnerable dependencies to the minimum patched version. If a CVE fix requires a major version upgrade, document the affected dependency, the current version, the upgraded major version, and the breaking change risk. Verify that the project builds and all tests pass after remediation.",
+      "skills": [
+        {
+          "name": "validate-cves-and-fix",
+          "location": "builtin"
+        }
+      ],
+      "successCriteria": {
+        "passBuild": "true",
+        "generateNewUnitTests": "false",
+        "passUnitTests": "true"
+      },
+      "dependencies": [
+        "001-transform-rabbitmq-to-servicebus",
+        "002-transform-sql-to-azure-sql"
+      ]
+    }
+  ],
+  "metadata": {
+    "planName": "modernization-plan",
+    "projectName": "ZavaAuditWorker",
+    "language": "dotnet",
+    "createdAt": "2026-05-29T00:28:33Z",
+    "version": "1.0"
+  }
+}
